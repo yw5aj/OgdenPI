@@ -85,6 +85,19 @@ mat3ds FEOgdenPI::DevStress(FEMaterialPoint &mp)
 	// extract elastic material data
 	FEElasticMaterialPoint& pt = *mp.ExtractData<FEElasticMaterialPoint>();
 
+	// Debug code: output the deformation gradient
+	if (1)
+	{
+		for (i=0; i<3; i++)
+		{
+			for (j=0; j<3; j++)
+				std::cout << pt.m_F(i, j) << "\t";
+			std::cout << std::endl;
+		}
+		std::cout << "Jacobian: " << pt.m_J << std::endl;
+
+	};
+
 	// jacobian
 	double J = pt.m_J;
 	double Jm13 = pow(J, -1.0/3.0);
@@ -159,6 +172,18 @@ mat3ds FEOgdenPI::DevStress(FEMaterialPoint &mp)
 
 		sd += I*(beta1/J) + m*((beta3 - beta1)/J);
 	}
+
+	// Debug code: print out deviatoric stress
+	std::cout << "Deviatoric stress:\n";
+	for (i=0; i<3; i++)
+	{
+		for (j=0; j<3; j++)
+		{
+			std::cout << sd.dev()(i, j) << "\t";
+		}
+		std::cout << std::endl;
+	}
+
 	return sd.dev();
 }
 
@@ -335,9 +360,6 @@ tens4ds FEOgdenPI::DevTangent(FEMaterialPoint& mp)
 				}
 			}
 
-			// Also part of debugging code
-			double subpart[6][6];
-
 			// the tensor dmi
 			for (j=0; j<6; ++j)
 				for (k=j; k<6; ++k)
@@ -345,24 +367,7 @@ tens4ds FEOgdenPI::DevTangent(FEMaterialPoint& mp)
 					dm[j][k] = 1.0/Di*(Ib[j][k] - BxB[j][k] + I3/lam2[i]*(IxI[j][k] - I4[j][k])) \
 						+ 1.0/Di*(lam2[i]*(BxM[j][k]+ MxB[j][k]) - 0.5*Dpi*lam[i]*MxM[j][k]) \
 						- 1.0/Di*(I3/lam2[i]*(IxM[j][k] + MxI[j][k]));
-					subpart[j][k] = BxM[j][k];
 				}
-			// Start of debugging code
-			double temp[6][6];
-			for (j=0; j<6; j++)
-				for (k=j; k<6; k++)
-					temp[j][k] = subpart[j][k];
-			for (j=1; j<6; ++j)
-				for (k=0; k<j; ++k)
-					temp[j][k] = temp[k][j];
-			tens4ds temp4ds = tens4ds(temp);
-			std::cout << "Order-4 tensor:\n";
-			for(j=0; j<3; j++)
-				for(k=0; k<3; k++)
-					for(l=0; l<3; l++)
-						for(n=0; n<3; n++)
-							std::cout << temp4ds(j, k, l, n) << "\t";
-			std::cout << std::endl;
 
 			beta = 0;
 			for (l=0; l<MAX_TERMS; ++l) beta += m_c[l]/m_m[l]*(lamd[i][l] - (lamd[0][l] + lamd[1][l] + lamd[2][l])/3.0);
@@ -436,13 +441,18 @@ tens4ds FEOgdenPI::DevTangent(FEMaterialPoint& mp)
 		beta1 = beta3 = 0;
 		for (l=0; l<MAX_TERMS; ++l) 
 		{
-			beta1 += m_c[l]/m_m[l]*(lamd[i][l] - (lamd[0][l] + lamd[1][l] + lamd[2][l])/3.0);
-			beta3 += m_c[l]/m_m[l]*(lamd[j][l] - (lamd[0][l] + lamd[1][l] + lamd[2][l])/3.0);
+			//beta1 += m_c[l]/m_m[l]*(lamd[i][l] - (lamd[0][l] + lamd[1][l] + lamd[2][l])/3.0);
+			//beta3 += m_c[l]/m_m[l]*(lamd[j][l] - (lamd[0][l] + lamd[1][l] + lamd[2][l])/3.0);
+			beta3 += m_c[l]/m_m[l]*(lamd[i][l] - (lamd[0][l] + lamd[1][l] + lamd[2][l])/3.0);
+			beta1 += m_c[l]/m_m[l]*(lamd[j][l] - (lamd[0][l] + lamd[1][l] + lamd[2][l])/3.0);
 		}
 
 		g11 = g33 = g13 = 0;
-		for (l=0; l<MAX_TERMS; ++l) g11 += m_c[l]*(lamd[i][l]/3.0 + (lamd[0][l]+lamd[1][l]+lamd[2][l])/9.0);
-		for (l=0; l<MAX_TERMS; ++l) g33 += m_c[l]*(lamd[j][l]/3.0 + (lamd[0][l]+lamd[1][l]+lamd[2][l])/9.0);
+		//for (l=0; l<MAX_TERMS; ++l) g11 += m_c[l]*(lamd[i][l]/3.0 + (lamd[0][l]+lamd[1][l]+lamd[2][l])/9.0);
+		//for (l=0; l<MAX_TERMS; ++l) g33 += m_c[l]*(lamd[j][l]/3.0 + (lamd[0][l]+lamd[1][l]+lamd[2][l])/9.0);
+		//for (l=0; l<MAX_TERMS; ++l) g13 += m_c[l]*(-lamd[i][l]/3.0 - lamd[j][l]/3.0 + (lamd[0][l]+lamd[1][l]+lamd[2][l])/9.0);
+		for (l=0; l<MAX_TERMS; ++l) g33 += m_c[l]*(lamd[i][l]/3.0 + (lamd[0][l]+lamd[1][l]+lamd[2][l])/9.0);
+		for (l=0; l<MAX_TERMS; ++l) g11 += m_c[l]*(lamd[j][l]/3.0 + (lamd[0][l]+lamd[1][l]+lamd[2][l])/9.0);
 		for (l=0; l<MAX_TERMS; ++l) g13 += m_c[l]*(-lamd[i][l]/3.0 - lamd[j][l]/3.0 + (lamd[0][l]+lamd[1][l]+lamd[2][l])/9.0);
 
 		// the matrix mi
@@ -475,6 +485,10 @@ tens4ds FEOgdenPI::DevTangent(FEMaterialPoint& mp)
 					- 1.0/Di*(I3/lam2[i]*(IxM[j][k] + MxI[j][k]));
 			}
 
+
+		// Debugging code
+		double subpart[6][6];
+
 		// add everything together
 		for (j=0; j<6; ++j)
 			for (k=j; k<6; ++k)
@@ -483,13 +497,39 @@ tens4ds FEOgdenPI::DevTangent(FEMaterialPoint& mp)
 					+ (g11/J)*(IxI[j][k] - IxM[j][k] - MxI[j][k] + MxM[j][k]) \
 					+ (g33/J)*MxM[j][k] \
 					+ (g13/J)*(MxI[j][k] - MxM[j][k] + IxM[j][k] - MxM[j][k]);
+				subpart[j][k] = D[j][k];
+				if (j != k)
+					subpart[k][j] = subpart[j][k];
 			}
+		
+		// Start debugging code
+		tens4ds subpart4ds = tens4ds(subpart);
+		std::cout << "Order-4 tensor:\n";
+		for (j=0; j<3; j++)
+			for (k=0; k<3; k++)
+				for (l=0; l<3; l++)
+					for (n=0; n<3; n++)
+						std::cout << subpart4ds(j, k, l, n) << "\t";
+		std::cout << std::endl;
+
+
 	}
 
 	// set symmetric components 
 	for (j=0; j<6; ++j)
 		for (k=j+1; k<6; ++k)
 			D[k][j] = D[j][k];
+
+	// Start debugging code
+	tens4ds D4ds = tens4ds(D);
+	std::cout << "Order-4 tensor:\n";
+	for (j=0; j<3; j++)
+		for (k=0; k<3; k++)
+			for (l=0; l<3; l++)
+				for (n=0; n<3; n++)
+					std::cout << D4ds(j, k, l, n) << "\t";
+	std::cout << std::endl;
+
 
 	// Separate different function calls
 	std::cout << "End of function call\n";
